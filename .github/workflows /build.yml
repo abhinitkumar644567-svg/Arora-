@@ -1,0 +1,57 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-android-apk:
+    name: Build Release APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Set up Flutter (Stable)
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Generate Android project files if missing
+        run: |
+          if [ ! -d "android" ]; then
+            flutter create . --platforms=android --org com.liquidglass --project-name liquid_glass_space
+            rm -f test/widget_test.dart
+          fi
+
+      - name: Set clean App Name on Android
+        run: |
+          if [ -f "android/app/src/main/AndroidManifest.xml" ]; then
+            sed -i 's/android:label="liquid_glass_space"/android:label="Liquid Glass Space"/g' android/app/src/main/AndroidManifest.xml
+          fi
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Build Android Release APK
+        run: flutter build apk --release
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LiquidGlassSpace-Android-APK
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+          
